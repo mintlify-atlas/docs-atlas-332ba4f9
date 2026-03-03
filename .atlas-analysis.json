@@ -1,0 +1,108 @@
+{
+  "projectType": "saas",
+  "projectName": "Luz de Arcanos",
+  "projectDescription": "AI-powered tarot reading web application providing personalized consultations generated in real-time by Google Gemini.",
+  "theme": "almond",
+  "primaryColor": "#7b3ff2",
+  "lightColor": "#c4a7ff",
+  "darkColor": "#4a1f9a",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "how-it-works"
+            ]
+          },
+          {
+            "group": "Features",
+            "pages": [
+              "features/ai-readings",
+              "features/card-system",
+              "features/animations",
+              "features/usage-limits"
+            ]
+          },
+          {
+            "group": "User Guide",
+            "pages": [
+              "guide/making-consultation",
+              "guide/understanding-readings",
+              "guide/tarot-basics",
+              "guide/best-practices"
+            ]
+          },
+          {
+            "group": "Technical",
+            "pages": [
+              "technical/architecture",
+              "technical/ai-integration",
+              "technical/deployment",
+              "technical/configuration"
+            ]
+          },
+          {
+            "group": "Resources",
+            "pages": [
+              "resources/faq",
+              "resources/support",
+              "resources/about"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Card Reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "cards/overview",
+              "cards/interpretations"
+            ]
+          },
+          {
+            "group": "Major Arcana",
+            "pages": [
+              "cards/major-arcana/list",
+              "cards/major-arcana/meanings"
+            ]
+          },
+          {
+            "group": "Minor Arcana",
+            "pages": [
+              "cards/minor-arcana/wands",
+              "cards/minor-arcana/pentacles",
+              "cards/minor-arcana/cups",
+              "cards/minor-arcana/swords"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "AI-powered tarot readings using Google Gemini 2.5 Flash",
+    "78 tarot cards with upright and reversed meanings",
+    "3D card flip animations with CSS",
+    "Three-card spread (Past, Present, Future)",
+    "Daily usage limits (5 consultations per day)",
+    "Personalized readings based on user questions",
+    "Responsive design with video background",
+    "SEO optimized with Open Graph and JSON-LD",
+    "Fallback reading system for API errors",
+    "LocalStorage-based usage tracking"
+  ],
+  "publicApiSurface": [
+    "actions.tarot.consult({ name, question, cards })",
+    "drawCards(n: number): TarotCard[]",
+    "allCards: TarotCard[] (78 cards)",
+    "TarotCard interface",
+    "Server action: tarot.consult"
+  ]
+}
