@@ -1,0 +1,280 @@
+---
+title: How it works
+description: Understanding the three-card spread, AI interpretation flow, and card drawing mechanism
+---
+
+Luz de Arcanos uses a three-card spread to provide insights into your past, present, and future. Here's how the entire process works from submission to final reading.
+
+## The three-card spread
+
+Each reading uses a traditional tarot spread with three positions:
+
+<Steps>
+  <Step title="Past — What brought you here">
+    The first card reveals influences from your past that are still affecting your current situation. It provides context for understanding where you are today.
+  </Step>
+
+  <Step title="Present — What's happening now">
+    The second card reflects your current circumstances and the energies surrounding you at this moment. It asks you to pay attention to how you're handling the situation.
+  </Step>
+
+  <Step title="Future — Where things are heading">
+    The third card shows the likely outcome if you continue on your current path. This isn't inevitable, but rather the most probable trajectory based on present conditions.
+  </Step>
+</Steps>
+
+## Card drawing mechanism
+
+The deck consists of 78 cards total:
+
+- **22 Major Arcana** — Significant life themes and spiritual lessons (The Fool, The Magician, Death, etc.)
+- **56 Minor Arcana** — Everyday situations across four suits:
+  - **Wands (Bastos)** — Creativity, passion, action, inspiration
+  - **Pentacles (Oros)** — Material wealth, career, practical matters
+  - **Cups (Copas)** — Emotions, relationships, intuition
+  - **Swords (Espadas)** — Thoughts, conflicts, truth, mental clarity
+
+### How cards are selected
+
+The `drawCards()` function in `src/data/cards.ts:647` randomly selects three cards:
+
+```typescript src/data/cards.ts
+export function drawCards(n: number): TarotCard[] {
+  const shuffled = [...allCards].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, n).map((card) => ({
+    ...card,
+    reversed: Math.random() > 0.6,
+  }));
+}
+```
+
+Each card has a 40% chance of being reversed, which changes its interpretation from upright keywords to reversed keywords.
+
+## AI interpretation flow
+
+Once you submit your consultation, here's what happens:
+
+<Steps>
+  <Step title="Form submission and validation">
+    Your name and question are validated client-side:
+    
+    ```typescript src/components/TarotForm.astro
+    const name = (document.getElementById('name') as HTMLInputElement).value.trim();
+    const question = (document.getElementById('question') as HTMLTextAreaElement).value.trim();
+    
+    if (!name) { showError('Por favor ingresa tu nombre.'); return; }
+    if (!question) { showError('Por favor ingresa tu consulta.'); return; }
+    ```
+    
+    - Name: 1-60 characters
+    - Question: 1-500 characters
+  </Step>
+
+  <Step title="Usage limit check">
+    Before drawing cards, the system checks if you've exceeded the daily limit:
+    
+    ```typescript src/components/TarotForm.astro
+    if (getRemainingReadings() <= 0) {
+      showError('Alcanzaste el límite de 5 consultas por día.');
+      return;
+    }
+    ```
+    
+    The limit is stored in `localStorage` under the key `tarot_usage` and resets after 24 hours.
+  </Step>
+
+  <Step title="Three cards are drawn">
+    The `drawCards(3)` function randomly selects three cards from the 78-card deck and determines if each is reversed:
+    
+    ```typescript src/components/TarotForm.astro
+    const cards = drawCards(3);
+    cards.forEach((card, i) => populateCard(i, card));
+    ```
+  </Step>
+
+  <Step title="Cards flip with 3D animation">
+    Cards flip one by one with a 700ms delay between each:
+    
+    ```typescript src/components/TarotForm.astro
+    function flipCards() {
+      [0, 1, 2].forEach((i) => {
+        setTimeout(() => {
+          document.getElementById(`card-${i}`)?.classList.add('flipped');
+        }, i * 700);
+      });
+    }
+    ```
+    
+    The 3D flip effect uses `transform-style: preserve-3d` in pure CSS.
+  </Step>
+
+  <Step title="Server action processes the reading">
+    The form data and drawn cards are sent to the server action at `src/actions/index.ts:30`:
+    
+    ```typescript src/actions/index.ts
+    const { data, error } = await actions.tarot.consult({ 
+      name, 
+      question, 
+      cards 
+    });
+    ```
+  </Step>
+
+  <Step title="AI generates the interpretation">
+    The server constructs a detailed prompt for Google Gemini:
+    
+    ```typescript src/actions/index.ts
+    const positions = ['Pasado', 'Presente', 'Futuro'] as const;
+    const cardsText = cards
+      .map((card, i) => {
+        const orientation = card.reversed ? 'invertida' : 'al derecho';
+        const keywords = card.reversed ? card.reversedKeywords : card.uprightKeywords;
+        return `• ${positions[i]}: ${card.name} (${orientation}) — ${card.description}. Energías: ${keywords.join(', ')}.`;
+      })
+      .join('\n');
+    ```
+    
+    The prompt includes:
+    - Your name and question
+    - Each card's position, name, orientation, description, and keywords
+    - Instructions for Seraphina's tone (warm, direct, practical)
+    - Maximum length of 250 words
+    - Structure: greeting, past, present, future, advice
+  </Step>
+
+  <Step title="Fallback system handles errors">
+    If the AI fails, the system tries multiple models:
+    
+    ```typescript src/actions/index.ts
+    const models = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.0-flash-lite'];
+    let reading: string | undefined;
+    
+    for (const model of models) {
+      try {
+        const response = await ai.models.generateContent({ model, contents: prompt });
+        if (response.text) {
+          reading = response.text;
+          break;
+        }
+      } catch (err: any) {
+        if (err?.status === 429) continue;
+        break;
+      }
+    }
+    
+    reading ??= getFallbackReading(name, cards);
+    ```
+    
+    If all models fail, a static template reading is generated from `src/actions/index.ts:15`.
+  </Step>
+
+  <Step title="Reading appears paragraph by paragraph">
+    The text is split into paragraphs and displayed with staggered fade-in animations:
+    
+    ```typescript src/components/TarotForm.astro
+    function renderReading(text: string) {
+      const paragraphs = text
+        .split(/\n{2,}/)
+        .map((p) => p.trim())
+        .filter(Boolean);
+    
+      readingBox.innerHTML = paragraphs
+        .map((p, i) => `<p style="animation-delay:${i * 0.25}s">${p.replace(/\n/g, ' ')}</p>`)
+        .join('');
+    }
+    ```
+    
+    Each paragraph fades in 0.25 seconds after the previous one.
+  </Step>
+
+  <Step title="Usage counter increments">
+    After a successful reading, the usage counter increments:
+    
+    ```typescript src/components/TarotForm.astro
+    function incrementUsage(): void {
+      const usage = getUsage();
+      const now = Date.now();
+      const reset = now - usage.firstUse >= WINDOW_MS;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        count: reset ? 1 : usage.count + 1,
+        firstUse: reset ? now : usage.firstUse,
+      }));
+    }
+    ```
+  </Step>
+</Steps>
+
+## Card data structure
+
+Each card in the deck contains:
+
+```typescript src/data/cards.ts
+export interface TarotCard {
+  id: number;
+  name: string;
+  image: string;
+  uprightKeywords: string[];
+  reversedKeywords: string[];
+  description: string;
+  reversed: boolean;
+}
+```
+
+Example from the deck:
+
+```typescript src/data/cards.ts
+{
+  id: 0,
+  name: 'El Loco',
+  image: '00_Fool.jpg',
+  uprightKeywords: ['nuevos comienzos', 'aventura', 'inocencia', 'libertad'],
+  reversedKeywords: ['imprudencia', 'ingenuidad', 'caos', 'locura'],
+  description: 'El inicio de un viaje, potencial ilimitado y espíritu libre dispuesto a todo',
+}
+```
+
+## Seraphina's personality
+
+The AI tarot reader is named Seraphina and follows specific guidelines from `src/actions/index.ts:53`:
+
+- **Tone**: Warm but direct and practical
+- **Style**: Clear language, not overly mystical
+- **Goal**: Provide actionable advice the person can apply immediately
+- **Constraints**: Won't answer health, medical diagnosis, or pregnancy questions
+- **Length**: Maximum 250 words per reading
+- **Structure**: Greeting → Past → Present → Future → Practical advice
+
+<Info>
+If you ask about health, diseases, medical diagnoses, or pregnancy, Seraphina will politely decline and recommend consulting a medical professional instead.
+</Info>
+
+## Usage limit system
+
+The 5-consultations-per-day limit works as follows:
+
+- **Storage**: Client-side in `localStorage` under key `tarot_usage`
+- **Window**: 24 hours (86400000 milliseconds)
+- **Reset**: Automatic after 24 hours from first use
+- **Data stored**:
+  ```typescript
+  {
+    count: number,      // Number of readings performed
+    firstUse: number    // Timestamp of first reading in current window
+  }
+  ```
+
+<Note>
+The limit is per browser/device. Clearing your browser's `localStorage` will reset the counter, but this is intentional to keep the implementation simple and privacy-focused.
+</Note>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Get started" icon="rocket" href="/quickstart">
+    Install and run the application locally
+  </Card>
+  
+  <Card title="Live demo" icon="globe" href="https://luzdearcanos.vercel.app/">
+    Try the production version
+  </Card>
+</CardGroup>

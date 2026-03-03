@@ -1,0 +1,102 @@
+---
+title: Making a consultation
+description: Step-by-step guide to getting your tarot reading with Seraphina
+---
+
+Luz de Arcanos provides personalized tarot readings through an intuitive consultation process. Here's how to get your reading from Seraphina, your AI tarot guide.
+
+## Starting your consultation
+
+<Steps>
+  <Step title="Enter your name">
+    Provide your name in the form (up to 60 characters). Seraphina will address you personally in your reading, creating a more intimate and meaningful experience.
+  </Step>
+
+  <Step title="Write your question">
+    Type your consultation question in the text area (up to 500 characters). You can be as detailed as you want—the more context you provide, the more tailored your reading will be.
+
+    <Note>
+      The app doesn't accept questions about health, medical diagnoses, or pregnancy. If you ask about these topics, Seraphina will politely decline and recommend consulting a medical professional instead.
+    </Note>
+  </Step>
+
+  <Step title="Reveal your destiny">
+    Click the "Revelar mi destino" button to submit your consultation. The form will validate your inputs and check that you haven't exceeded your daily limit.
+  </Step>
+</Steps>
+
+## What happens next
+
+Once you submit your consultation, several things happen automatically:
+
+### Card selection
+
+The app draws three random cards from the full 78-card tarot deck. Each card has a 40% chance of appearing reversed (upside down), which changes its meaning and energy.
+
+### The reveal animation
+
+You'll see three face-down cards appear on screen, labeled Past, Present, and Future. After a brief moment:
+
+- The first card flips over (Past)
+- 700ms later, the second card flips (Present)  
+- 700ms after that, the third card flips (Future)
+
+While the cards are being revealed, you'll see: "Seraphina está interpretando las cartas…"
+
+### AI interpretation
+
+Seraphina analyzes your question and the three drawn cards to create a unique reading. The AI considers:
+
+- Each card's name and position
+- Whether each card is upright or reversed
+- The card descriptions and keyword energies
+- Your specific question and context
+
+<Info>
+The app uses Google Gemini AI (trying multiple models in order: Gemini 2.5 Flash, Gemini 2.0 Flash, and Gemini 2.0 Flash Lite) to generate natural, conversational readings in Seraphina's warm but direct style.
+</Info>
+
+## Reading your results
+
+Once Seraphina completes the interpretation, her reading appears paragraph by paragraph with a smooth fade-in animation. Each paragraph appears 0.25 seconds after the previous one, creating a natural reading flow.
+
+The reading includes:
+
+- A personalized greeting using your name
+- Interpretation of the Past card (what brought you here)
+- Analysis of the Present card (what's happening now)
+- Insights about the Future card (where things are heading)
+- Practical advice you can apply immediately
+
+<Tip>
+Readings are kept under 250 words so they're easy to read and focused on actionable insights rather than mystical language.
+</Tip>
+
+## After your reading
+
+Click the "Nueva consulta" button to:
+
+- Reset the form
+- Clear the cards
+- Start a fresh consultation
+
+This counts as one of your daily readings.
+
+## Daily limits
+
+The app limits you to **5 consultations per 24-hour period** to encourage thoughtful questions and reflection on each reading. The limit resets automatically after 24 hours from your first consultation of the day.
+
+If you've reached your limit, you'll see: "Alcanzaste el límite de 5 consultas por día. Volvé mañana para seguir explorando."
+
+## Error handling
+
+<Accordion title="What if something goes wrong?">
+  The app handles several types of errors gracefully:
+
+  - **Missing name or question**: You'll see a prompt asking you to complete the required fields
+  - **Daily limit reached**: The form will notify you and prevent submission
+  - **Connection issues**: If the AI service is unavailable, you'll receive a fallback reading based on the drawn cards
+  - **Invalid data**: The form validates inputs and alerts you to any issues
+
+  If an error occurs, the cards reset and you return to the consultation form without losing your daily reading count.
+</Accordion>

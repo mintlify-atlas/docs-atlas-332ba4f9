@@ -1,0 +1,186 @@
+---
+title: Support & Troubleshooting
+description: Get help with common issues and learn how to troubleshoot Luz de Arcanos
+---
+
+## Support & Troubleshooting
+
+Having issues with Luz de Arcanos? Find solutions to common problems below.
+
+## Common Issues
+
+### Daily Limit Reached
+
+**Error message:** "Alcanzaste el límite de 5 consultas por día. Volvé mañana para seguir explorando."
+
+**Solution:** You've used all 5 of your daily consultations. The limit resets 24 hours after your first consultation of the day. This limit is tracked in your browser's localStorage.
+
+<Info>
+  To check your remaining consultations, the system tracks usage locally. If you need more consultations, you can:
+  - Wait for your 24-hour window to reset
+  - Use a different browser (each browser has independent limits)
+  - Run your own instance with your own Gemini API key
+</Info>
+
+### Form Validation Errors
+
+**Error message:** "Por favor ingresa tu nombre" or "Por favor ingresa tu consulta"
+
+**Solution:** Both fields are required:
+- **Name**: 1-60 characters
+- **Question**: 1-500 characters
+
+Make sure you've filled in both fields before submitting.
+
+### Invalid Data Error
+
+**Error message:** "Los datos enviados no son válidos. Revisá el nombre y la consulta."
+
+**Solution:** This occurs when the form data doesn't pass validation:
+- Name must be between 1-60 characters
+- Question must be between 1-500 characters
+- Check for any special characters that might be causing issues
+
+### Connection Error
+
+**Error message:** "No se pudo conectar con el oráculo. Verificá tu conexión e inténtalo de nuevo."
+
+**Possible causes:**
+- No internet connection
+- Server is temporarily unavailable
+- Network firewall blocking the request
+
+**Solutions:**
+1. Check your internet connection
+2. Try refreshing the page
+3. Wait a few minutes and try again
+4. Try a different network if available
+
+### Reading Failed to Complete
+
+**Error message:** "El oráculo no pudo completar tu lectura. Inténtalo de nuevo en unos momentos."
+
+**Possible causes:**
+- Google Gemini API is temporarily unavailable
+- API quota exceeded on the server side
+- Server error during processing
+
+**Solutions:**
+1. Wait a few minutes before trying again
+2. The system has automatic fallback between three Gemini models, so this error is rare
+3. If the problem persists, check the [GitHub repository](https://github.com) for service status updates
+
+<Warning>
+  If you see this error repeatedly, there may be a temporary issue with the Google Gemini API service.
+</Warning>
+
+## Browser Requirements
+
+Luz de Arcanos works best with modern browsers. Minimum requirements:
+
+### JavaScript
+
+<Note>
+  JavaScript **must be enabled** for the application to function. The entire consultation flow, card animations, and AI integration require JavaScript.
+</Note>
+
+The application uses:
+- Modern ES6+ JavaScript features
+- Astro Actions for server communication
+- CSS animations for card flips
+- Form validation and submission handling
+
+### localStorage
+
+The daily consultation limit (5 per day) is tracked using **browser localStorage**.
+
+<Info>
+  If localStorage is disabled or blocked:
+  - The limit tracking won't work properly
+  - You may get fewer or more consultations than expected
+  - Private/Incognito mode clears localStorage when closed
+</Info>
+
+To ensure proper functionality:
+- Enable localStorage in your browser settings
+- Don't block site data for luzdearcanos.vercel.app
+- Note that Incognito/Private mode resets your limit when closed
+
+### Supported Browsers
+
+✅ **Fully supported:**
+- Chrome/Edge 90+
+- Firefox 88+
+- Safari 14+
+- Opera 76+
+
+⚠️ **Limited support:**
+- Internet Explorer: Not supported (lacks modern CSS and JavaScript features)
+
+## Responsive Design
+
+The application is fully responsive and works on:
+- Desktop computers
+- Tablets
+- Mobile phones (portrait and landscape)
+
+The video background and card layout adapt automatically to your screen size.
+
+## Privacy & Data
+
+### What data is stored?
+
+**Locally (in your browser):**
+- Consultation count and timestamp (localStorage)
+- No personal information or consultation content is stored
+
+**On the server:**
+- Your name and question are sent to Google Gemini API to generate the reading
+- No data is permanently stored on Luz de Arcanos servers
+- Readings are generated in real-time and not saved
+
+### Third-party services
+
+The application sends data to:
+- **Google Gemini API**: Receives your name, question, and card data to generate personalized readings
+- Google's privacy policy applies to this data processing
+
+## Getting Help
+
+### GitHub Repository
+
+Luz de Arcanos is open source! You can:
+- Report bugs and issues
+- Request new features
+- View the source code
+- Contribute improvements
+
+**Repository:** Check the [About](/resources/about) page for the GitHub link
+
+### Opening an Issue
+
+When reporting a problem, please include:
+1. **Browser and version** (e.g., Chrome 120)
+2. **Device type** (desktop, mobile, tablet)
+3. **Error message** (exact text if shown)
+4. **Steps to reproduce** the issue
+5. **Expected vs actual behavior**
+
+### Self-Hosting
+
+If you want unlimited consultations or custom configuration:
+
+1. Clone the repository
+2. Get a free Google Gemini API key from [Google AI Studio](https://aistudio.google.com)
+3. Add it to `.env` as `GEMINI_API_KEY`
+4. Run with `bun install` and `bun dev`
+
+See the README for complete setup instructions.
+
+## Contact
+
+<Info>
+  For technical support, feature requests, or bug reports, please use the **GitHub Issues** page on the repository.
+  
+  For general questions about the project, visit the [About](/resources/about) page to learn more about the creator and project.
+</Info>

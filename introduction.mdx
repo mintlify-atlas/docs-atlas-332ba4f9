@@ -1,0 +1,63 @@
+---
+title: Introduction
+description: Welcome to Luz de Arcanos — AI-powered tarot readings that interpret the cards for you
+---
+
+Luz de Arcanos is a web application that delivers personalized tarot readings generated in real-time by artificial intelligence. You enter your name and question, three animated cards are revealed (past, present, and future), and the AI interprets the spread in natural language.
+
+**[View live demo →](https://luzdearcanos.vercel.app/)**
+
+## Key features
+
+<CardGroup cols={2}>
+  <Card title="Quick start" icon="rocket" href="/quickstart">
+    Get the app running locally in under 5 minutes
+  </Card>
+  
+  <Card title="How it works" icon="lightbulb" href="/how-it-works">
+    Understand the three-card spread and AI interpretation flow
+  </Card>
+  
+  <Card title="78 tarot cards" icon="cards">
+    Complete deck with 22 Major Arcana and 56 Minor Arcana cards
+  </Card>
+  
+  <Card title="AI-powered readings" icon="sparkles">
+    Google Gemini 2.5 Flash generates unique interpretations for each consultation
+  </Card>
+</CardGroup>
+
+## What's included
+
+Luz de Arcanos combines modern web technology with tarot wisdom to create an engaging user experience:
+
+- **AI integration** with Google Gemini 2.5 Flash for unique readings on each consultation
+- **3D card animations** using pure CSS with `transform-style: preserve-3d`
+- **Video background** on loop with overlay and fully responsive design
+- **Progressive reveal** where cards appear while the AI processes the response
+- **Staggered text display** as reading paragraphs fade in one by one
+- **Usage limits** of 5 consultations per day per user via `localStorage`
+- **Automatic fallback** between Gemini models when quota errors occur (429)
+- **Complete SEO** including Open Graph, Twitter Card, JSON-LD Schema.org, canonical URLs, and favicons for all devices
+
+## Technology stack
+
+| Technology | Purpose |
+|------------|----------|
+| [Astro 5](https://astro.build) | Framework — SSR with Server Actions |
+| [Google Gemini API](https://ai.google.dev) | AI-generated readings |
+| [Vercel](https://vercel.com) | Deploy with SSR adapter |
+| TypeScript | Type safety in actions and components |
+| Pure CSS | 3D animations, layout, visual theme |
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/quickstart">
+    Install dependencies and configure your environment
+  </Card>
+  
+  <Card title="Three-card spread" icon="layer-group" href="/how-it-works">
+    Learn how the past-present-future reading works
+  </Card>
+</CardGroup>

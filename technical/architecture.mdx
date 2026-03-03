@@ -1,0 +1,261 @@
+---
+title: 'System Architecture'
+description: 'Technical overview of Luz de Arcanos architecture, tech stack, and design patterns'
+---
+
+## Overview
+
+Luz de Arcanos is built as a modern server-side rendered web application using Astro 5 with SSR (Server-Side Rendering) capabilities. The architecture emphasizes simplicity, performance, and a clear separation between client and server logic.
+
+## Tech Stack
+
+| Technology | Version | Purpose |
+|------------|---------|----------|
+| [Astro](https://astro.build) | 5.17.1 | SSR framework with Server Actions |
+| [Google Gemini API](https://ai.google.dev) | @google/genai 1.42.0 | AI-powered tarot reading generation |
+| [Vercel](https://vercel.com) | @astrojs/vercel 9.0.4 | Serverless deployment adapter |
+| TypeScript | - | Type safety across the application |
+| CSS | - | Styling, animations, and 3D transforms |
+
+<Info>
+  See `package.json:11-15` for the complete dependency list.
+</Info>
+
+## Architecture Diagram
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        Client Layer                         │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐  │
+│  │ TarotForm    │  │ Card Flip    │  │ localStorage     │  │
+│  │ Component    │──│ Animations   │──│ Usage Tracking   │  │
+│  └──────────────┘  └──────────────┘  └──────────────────┘  │
+│         │                                      │             │
+│         └──────────────────┬───────────────────┘             │
+│                            │                                 │
+│                    ┌───────▼────────┐                        │
+│                    │ Astro Actions  │                        │
+│                    │ API Client     │                        │
+│                    └───────┬────────┘                        │
+└────────────────────────────┼──────────────────────────────────┘
+                             │
+                    HTTP POST (JSON)
+                             │
+┌────────────────────────────▼──────────────────────────────────┐
+│                       Server Layer (SSR)                      │
+│  ┌──────────────────────────────────────────────────────┐    │
+│  │  Astro Server Actions (src/actions/index.ts)         │    │
+│  │  ┌────────────────────────────────────────────────┐  │    │
+│  │  │  1. Validate input (Zod schema)                │  │    │
+│  │  │  2. Initialize GoogleGenAI client              │  │    │
+│  │  │  3. Build prompt from cards + question         │  │    │
+│  │  │  4. Try models with fallback on 429 errors     │  │    │
+│  │  │  5. Return AI reading or fallback text         │  │    │
+│  │  └────────────────────────────────────────────────┘  │    │
+│  └──────────────────────┬───────────────────────────────┘    │
+│                         │                                     │
+│              ┌──────────▼──────────┐                          │
+│              │ Google Gemini API   │                          │
+│              │ (External Service)  │                          │
+│              └─────────────────────┘                          │
+└───────────────────────────────────────────────────────────────┘
+                             │
+┌────────────────────────────▼──────────────────────────────────┐
+│                    Deployment Layer                           │
+│  ┌────────────────────┐  ┌────────────────────────────┐      │
+│  │ Vercel Serverless  │  │ Environment Variables      │      │
+│  │ Functions (SSR)    │  │ (GEMINI_API_KEY)           │      │
+│  └────────────────────┘  └────────────────────────────┘      │
+└───────────────────────────────────────────────────────────────┘
+```
+
+## Core Components
+
+### Server Actions Architecture
+
+Astro 5's Server Actions provide type-safe, RPC-style endpoints that handle the tarot consultation logic:
+
+<CodeGroup>
+```typescript src/actions/index.ts
+import { defineAction } from 'astro:actions';
+import { z } from 'astro:schema';
+import { GoogleGenAI } from '@google/genai';
+
+export const server = {
+  tarot: {
+    consult: defineAction({
+      input: z.object({
+        name: z.string().min(1).max(60),
+        question: z.string().min(1).max(500),
+        cards: z.array(CardSchema).length(3),
+      }),
+      handler: async ({ name, question, cards }) => {
+        // Server-side processing
+        const apiKey = import.meta.env.GEMINI_API_KEY;
+        const ai = new GoogleGenAI({ apiKey });
+        // ... AI generation logic
+      },
+    }),
+  },
+};
+```
+</CodeGroup>
+
+<Info>
+  Server Actions automatically handle validation, serialization, and error responses. See `src/actions/index.ts:28-97` for the complete implementation.
+</Info>
+
+### Client-Side State Management
+
+The application uses **localStorage** for client-side usage tracking without requiring authentication:
+
+<CodeGroup>
+```typescript TarotForm.astro (lines 177-203)
+const LIMIT = 5;
+const WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours
+const STORAGE_KEY = 'tarot_usage';
+
+function getUsage(): { count: number; firstUse: number } {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return { count: 0, firstUse: Date.now() };
+}
+
+function incrementUsage(): void {
+  const usage = getUsage();
+  const now = Date.now();
+  const reset = now - usage.firstUse >= WINDOW_MS;
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({
+    count: reset ? 1 : usage.count + 1,
+    firstUse: reset ? now : usage.firstUse,
+  }));
+}
+```
+</CodeGroup>
+
+<Warning>
+  localStorage limits are client-side only and can be cleared by users. This is intentional for a recreational application.
+</Warning>
+
+### 3D Card Flip Animations
+
+Pure CSS animations using `transform-style: preserve-3d` create the card flip effect:
+
+```css
+.card-inner {
+  transform-style: preserve-3d;
+  transition: transform 0.8s;
+}
+
+.card.flipped .card-inner {
+  transform: rotateY(180deg);
+}
+
+.card-face {
+  backface-visibility: hidden;
+}
+
+.card-front {
+  transform: rotateY(180deg);
+}
+```
+
+Cards flip sequentially with staggered delays:
+
+```typescript
+function flipCards() {
+  [0, 1, 2].forEach((i) => {
+    setTimeout(() => {
+      document.getElementById(`card-${i}`)?.classList.add('flipped');
+    }, i * 700); // 700ms stagger
+  });
+}
+```
+
+<Info>
+  See `src/components/TarotForm.astro:148-154` for the flip animation logic.
+</Info>
+
+## Deployment Architecture
+
+The application is configured for **Vercel serverless deployment** with SSR:
+
+<CodeGroup>
+```javascript astro.config.mjs
+import { defineConfig } from 'astro/config';
+import vercel from '@astrojs/vercel';
+
+export default defineConfig({
+  output: 'server',  // Enable SSR
+  adapter: vercel(), // Vercel serverless adapter
+});
+```
+</CodeGroup>
+
+### Build Process
+
+```bash
+# Development server
+bun dev
+
+# Production build
+bun build
+
+# Preview production build
+bun preview
+```
+
+<Note>
+  The build command compiles Astro pages and creates serverless functions for the Vercel platform. See `package.json:5-9` for available scripts.
+</Note>
+
+## Data Flow
+
+1. **User Input** → Form submission with name and question
+2. **Client Validation** → Check usage limits via localStorage
+3. **Card Selection** → Random 3-card draw from 78-card deck
+4. **Server Action** → POST to `actions.tarot.consult` with typed payload
+5. **Input Validation** → Zod schema validates name (1-60 chars), question (1-500 chars), and card array
+6. **AI Generation** → Google Gemini API generates personalized reading
+7. **Fallback Logic** → If API fails, return template-based reading
+8. **Response Rendering** → Paragraphs appear with staggered fade-in animations
+9. **Usage Tracking** → Increment localStorage counter
+
+## Performance Optimizations
+
+- **Video Background**: Loop playback with `playsinline` for mobile compatibility
+- **Lazy Loading**: Card images use `loading="lazy"` attribute
+- **Font Preconnect**: Google Fonts preconnected for faster loading
+- **Minimal JavaScript**: Only form logic and animations run client-side
+- **SSR**: Initial HTML fully rendered on server for fast First Contentful Paint
+- **Serverless Functions**: Auto-scaling via Vercel's edge network
+
+## Security Considerations
+
+<Warning>
+  The `GEMINI_API_KEY` is stored as an environment variable and never exposed to the client. All API calls occur server-side.
+</Warning>
+
+- API key only accessible in server actions via `import.meta.env`
+- Input validation with Zod prevents injection attacks
+- Rate limiting via client-side usage tracking (5 consultations per 24 hours)
+- Content filtering in AI prompt rejects health-related questions
+- No user authentication or data persistence (privacy by design)
+
+## File Structure
+
+```
+src/
+├── actions/
+│   └── index.ts           # Server Actions (AI integration)
+├── components/
+│   └── TarotForm.astro    # Main form component with client logic
+├── data/
+│   └── cards.ts           # 78-card tarot deck data
+├── pages/
+│   └── index.astro        # Home page with SEO metadata
+└── styles/
+    └── global.css         # Animations and theme
+```

@@ -1,0 +1,354 @@
+---
+title: 3D card animations
+description: Discover how Luz de Arcanos creates immersive card flip animations using CSS 3D transforms and sequential timing.
+---
+
+## Overview
+
+Luz de Arcanos features smooth 3D card flip animations that reveal tarot cards one by one with a 700ms stagger. The animations use pure CSS transforms with `preserve-3d` for realistic depth.
+
+## 3D card flip mechanics
+
+The card flip effect uses CSS 3D transforms to create a realistic turning animation:
+
+### HTML structure
+
+```html
+<div class="card" id="card-0">
+  <div class="card-inner">
+    <div class="card-face card-back">
+      <div class="card-back-pattern">✦</div>
+    </div>
+    <div class="card-face card-front" id="card-front-0"></div>
+  </div>
+</div>
+```
+
+<Accordion title="Structure breakdown">
+  - **`.card`**: Outer container with perspective
+  - **`.card-inner`**: Transform container with `preserve-3d`
+  - **`.card-back`**: Visible face before flip
+  - **`.card-front`**: Hidden face that appears after flip (rotated 180°)
+</Accordion>
+
+## CSS 3D transforms
+
+### Perspective and preservation
+
+```css
+.card {
+  width: 260px;
+  height: 430px;
+  perspective: 2400px;
+  cursor: default;
+}
+
+.card-inner {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 1.2s cubic-bezier(0.45, 0.05, 0.55, 0.95);
+}
+```
+
+<Info>
+`transform-style: preserve-3d` is critical - it ensures child elements maintain their 3D position in space rather than being flattened.
+</Info>
+
+### Flip transformation
+
+```css
+.card.flipped .card-inner {
+  transform: rotateY(180deg);
+}
+```
+
+When the `.flipped` class is added, the inner container rotates 180 degrees around the Y-axis over 1.2 seconds.
+
+## Card face positioning
+
+### Backface visibility
+
+```css
+.card-face {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-card);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  overflow: hidden;
+}
+```
+
+<Note>
+`backface-visibility: hidden` prevents the back of each face from showing through during the flip animation.
+</Note>
+
+### Card back (initial state)
+
+```css
+.card-back {
+  background: var(--surface);
+  border: 2px solid var(--gold-dim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.card-back-pattern {
+  width: 80%;
+  height: 80%;
+  border: 1px solid var(--gold-dim);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+  opacity: 0.5;
+  background:
+    repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 6px,
+      rgba(201, 168, 76, 0.05) 6px,
+      rgba(201, 168, 76, 0.05) 12px
+    );
+}
+```
+
+### Card front (revealed state)
+
+```css
+.card-front {
+  transform: rotateY(180deg);
+  border: 2px solid var(--gold);
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+}
+```
+
+The front is pre-rotated 180° so when the container flips, it becomes visible.
+
+## Reversed cards
+
+When a card is drawn reversed, an additional 180° rotation is applied:
+
+```css
+.card-front.reversed-card {
+  transform: rotateY(180deg) rotate(180deg);
+}
+```
+
+This combines the base flip rotation with a full card rotation to display it upside-down.
+
+## Sequential reveal timing
+
+Cards flip one at a time with 700ms intervals:
+
+```typescript
+function flipCards() {
+  [0, 1, 2].forEach((i) => {
+    setTimeout(() => {
+      document.getElementById(`card-${i}`)?.classList.add('flipped');
+    }, i * 700);
+  });
+}
+```
+
+<Tabs>
+  <Tab title="Timeline">
+    - **t=0ms**: Card 0 (Past) flips
+    - **t=700ms**: Card 1 (Present) flips
+    - **t=1400ms**: Card 2 (Future) flips
+  </Tab>
+  <Tab title="Visual flow">
+    The staggered timing creates a dramatic reveal sequence that guides the user's attention from past to present to future.
+  </Tab>
+</Tabs>
+
+## Card population
+
+Before flipping, card content is dynamically injected:
+
+```typescript
+function populateCard(index: number, card: TarotCard) {
+  const front = document.getElementById(`card-front-${index}`)!;
+
+  if (card.reversed) {
+    front.classList.add('reversed-card');
+  }
+
+  front.innerHTML = `
+    <img
+      src="/cards/${card.image}"
+      alt="${card.name}"
+      class="card-image"
+      loading="lazy"
+    />
+    <span class="card-name">${card.name}</span>
+  `;
+}
+```
+
+## Card image styling
+
+```css
+.card-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+}
+
+.card-name {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  font-family: 'Cinzel', serif;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  color: var(--gold);
+  text-transform: uppercase;
+  line-height: 1.3;
+  padding: 0.6rem 0.4rem 0.5rem;
+  background: linear-gradient(to top, rgba(13, 10, 26, 0.95) 70%, transparent);
+  z-index: 1;
+}
+```
+
+The card name appears at the bottom with a gradient background to ensure readability.
+
+## Video background
+
+The application features a video background with overlay:
+
+```css
+.video-bg {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: -2;
+  pointer-events: none;
+}
+
+.video-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(13, 10, 26, 0.75);
+  z-index: -1;
+  pointer-events: none;
+}
+```
+
+<Info>
+The overlay provides a 75% opacity dark layer that ensures text readability while maintaining atmospheric depth.
+</Info>
+
+## Loading spinner
+
+While the AI generates the reading, a spinning mystical symbol appears:
+
+```css
+.loading-spinner {
+  font-size: 3.5rem;
+  display: block;
+  animation: spin-pulse 2s ease-in-out infinite;
+  margin-bottom: 1.5rem;
+}
+
+@keyframes spin-pulse {
+  0%   { transform: rotate(0deg) scale(1);   opacity: 1; }
+  50%  { transform: rotate(180deg) scale(1.15); opacity: 0.7; }
+  100% { transform: rotate(360deg) scale(1); opacity: 1; }
+}
+```
+
+The animation combines rotation with pulsing scale and opacity for a mystical effect.
+
+## Reading text fade-in
+
+Each paragraph of the reading fades in sequentially:
+
+```css
+.reading-box p {
+  line-height: 1.85;
+  margin-bottom: 1.25rem;
+  color: var(--text);
+  font-size: 1.2rem;
+  opacity: 0;
+  animation: fade-in-up 0.6s ease forwards;
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+```
+
+Paragraphs are rendered with staggered delays:
+
+```typescript
+function renderReading(text: string) {
+  const paragraphs = text
+    .split(/\n{2,}/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+
+  readingBox.innerHTML = paragraphs
+    .map((p, i) => `<p style="animation-delay:${i * 0.25}s">${p.replace(/\n/g, ' ')}</p>`)
+    .join('');
+}
+```
+
+Each paragraph delays by 250ms (0.25s × index).
+
+## Complete animation sequence
+
+<Accordion title="Full timeline">
+  1. **User submits form** (t=0ms)
+  2. **Card content populated** immediately
+  3. **View switches to reading section** 
+  4. **200ms delay** for DOM paint
+  5. **Past card flips** (t=200ms)
+  6. **Present card flips** (t=900ms)
+  7. **Future card flips** (t=1600ms)
+  8. **AI reading completes** (variable time)
+  9. **Paragraphs fade in** (250ms stagger)
+</Accordion>
+
+## Reset animation
+
+When starting a new reading, cards are reset:
+
+```typescript
+function resetCards() {
+  [0, 1, 2].forEach((i) => {
+    const card  = document.getElementById(`card-${i}`);
+    const front = document.getElementById(`card-front-${i}`);
+    card?.classList.remove('flipped');
+    front?.classList.remove('reversed-card');
+    if (front) front.innerHTML = '';
+  });
+}
+```
+
+This removes flip classes, clears reversed states, and empties the card content.
+
+<Warning>
+Always reset cards before populating new ones to prevent visual glitches from previous readings.
+</Warning>

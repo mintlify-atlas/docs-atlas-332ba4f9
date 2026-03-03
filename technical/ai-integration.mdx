@@ -1,0 +1,333 @@
+---
+title: 'AI Integration'
+description: 'Google Gemini API integration, prompt engineering, model selection, and error handling strategies'
+---
+
+## Overview
+
+Luz de Arcanos uses the **Google Gemini API** to generate personalized tarot readings in real-time. The integration includes multi-model fallback, prompt engineering for consistent voice, content filtering, and graceful degradation.
+
+## Google Gemini Setup
+
+### API Client Initialization
+
+The Gemini client is initialized server-side with the API key from environment variables:
+
+<CodeGroup>
+```typescript src/actions/index.ts (lines 37-42)
+handler: async ({ name, question, cards }) => {
+  const apiKey = import.meta.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new Error('GEMINI_API_KEY no configurada');
+  }
+
+  const ai = new GoogleGenAI({ apiKey });
+```
+</CodeGroup>
+
+<Warning>
+  The API key is never exposed to the client. All AI calls happen in server actions.
+</Warning>
+
+### Obtaining an API Key
+
+Get your free Gemini API key from [Google AI Studio](https://aistudio.google.com/):
+
+1. Visit https://aistudio.google.com/
+2. Sign in with your Google account
+3. Click "Get API Key" in the dashboard
+4. Copy the key and add it to your `.env` file
+
+<CodeGroup>
+```bash .env
+GEMINI_API_KEY=your_gemini_api_key_here
+```
+</CodeGroup>
+
+<Info>
+  See `.env.example:1-2` for the environment variable template.
+</Info>
+
+## Model Selection & Fallback
+
+The application implements a **three-tier fallback strategy** to handle rate limits (HTTP 429 errors):
+
+<CodeGroup>
+```typescript src/actions/index.ts (lines 75-89)
+const models = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.0-flash-lite'];
+let reading: string | undefined;
+
+for (const model of models) {
+  try {
+    const response = await ai.models.generateContent({ model, contents: prompt });
+    if (response.text) {
+      reading = response.text;
+      break; // Success - exit loop
+    }
+  } catch (err: any) {
+    if (err?.status === 429) continue; // Rate limit - try next model
+    break; // Other error - stop trying
+  }
+}
+```
+</CodeGroup>
+
+### Model Priority
+
+1. **gemini-2.5-flash** (Primary)
+   - Latest model with improved reasoning
+   - Best quality output
+   - First to hit rate limits under high load
+
+2. **gemini-2.0-flash** (Fallback #1)
+   - Previous generation, still high quality
+   - Lower rate limit threshold
+
+3. **gemini-2.0-flash-lite** (Fallback #2)
+   - Fastest, most cost-effective
+   - Reduced capabilities but adequate for tarot readings
+
+<Note>
+  The fallback only triggers on **429 (rate limit)** errors. Other errors (e.g., invalid API key, network issues) immediately stop the loop.
+</Note>
+
+## Prompt Engineering
+
+### Prompt Structure
+
+The prompt is carefully engineered to produce consistent, branded, conversational readings:
+
+<CodeGroup>
+```typescript src/actions/index.ts (lines 44-73)
+const positions = ['Pasado', 'Presente', 'Futuro'] as const;
+const cardsText = cards
+  .map((card, i) => {
+    const orientation = card.reversed ? 'invertida' : 'al derecho';
+    const keywords = card.reversed ? card.reversedKeywords : card.uprightKeywords;
+    return `• ${positions[i]}: ${card.name} (${orientation}) — ${card.description}. Energías: ${keywords.join(', ')}.`;
+  })
+  .join('\n');
+
+const prompt = `Actúa como Seraphina, una tarotista profesional y empática. Tu estilo es cálido pero directo y práctico. No usas palabras complicadas ni eres excesivamente mística. Tu objetivo es ayudar a la persona con consejos que pueda aplicar mañana mismo.
+
+DATOS:
+- Nombre: ${name}
+- Pregunta: "${question}"
+- Cartas: ${cardsText}
+
+REGLAS DE ESCRITURA:
+1. Sé breve: La lectura completa NO debe superar las 250 palabras.
+2. Lenguaje claro: Habla como una amiga sabia, no como un libro antiguo. Evita palabras como "tapiz del universo", "susurros", "vibrar" o "centurias".
+3. Estructura directa:
+   - APERTURA: Hola ${name}, vamos a ver qué dicen las cartas sobre tu pregunta. (Máximo 2 frases).
+   - PASADO: Lo que te trajo aquí.
+   - PRESENTE: Lo que pasa ahora.
+   - FUTURO: Lo que viene.
+   - CONSEJO: Un paso práctico a seguir.
+4. Tono: Positivo y constructivo, pero realista.
+
+IMPORTANTE: No uses formato Markdown (sin negritas ni asteriscos). Responde en español y ve al grano.
+
+RESTRICCIONES: Si la pregunta trata sobre salud, enfermedades, diagnósticos médicos o embarazo, no respondas la consulta de tarot. En su lugar, indica amablemente que este servicio no aborda temas de salud y recomienda consultar a un profesional médico.`;
+```
+</CodeGroup>
+
+### Prompt Design Principles
+
+<ParamField path="Character" type="string" default="Seraphina">
+  **Seraphina** persona: Professional, empathetic, warm but direct. Avoids mystical jargon.
+</ParamField>
+
+<ParamField path="Word Limit" type="number" default="250">
+  Maximum 250 words to ensure mobile-friendly, digestible readings.
+</ParamField>
+
+<ParamField path="Structure" type="string" required>
+  Five-part structure: Apertura → Pasado → Presente → Futuro → Consejo
+</ParamField>
+
+<ParamField path="Language" type="string" default="Spanish">
+  All responses in Spanish (Argentina). Plain text only, no Markdown formatting.
+</ParamField>
+
+<ParamField path="Content Filtering" type="boolean" default="true">
+  Automatically rejects health, medical diagnosis, and pregnancy questions.
+</ParamField>
+
+### Card Data Integration
+
+Each card includes orientation and keywords that inform the AI's interpretation:
+
+```typescript
+const orientation = card.reversed ? 'invertida' : 'al derecho';
+const keywords = card.reversed ? card.reversedKeywords : card.uprightKeywords;
+```
+
+**Example card data passed to prompt:**
+```
+• Pasado: El Loco (al derecho) — Nuevos comienzos, espontaneidad. Energías: libertad, aventura, fe.
+• Presente: La Torre (invertida) — Caos evitado, resistencia al cambio. Energías: miedo, negación, estancamiento.
+• Futuro: El Sol (al derecho) — Claridad, éxito, alegría. Energías: optimismo, vitalidad, verdad.
+```
+
+<Info>
+  Card data structure is defined in `src/actions/index.ts:5-13` using Zod schema validation.
+</Info>
+
+## Error Handling
+
+### Three-Layer Fallback System
+
+1. **API Success** → Return AI-generated reading
+2. **Rate Limit (429)** → Try next model in cascade
+3. **All Models Exhausted** → Return template-based fallback
+
+<CodeGroup>
+```typescript src/actions/index.ts (line 91)
+reading ??= getFallbackReading(name, cards);
+```
+</CodeGroup>
+
+### Fallback Reading Template
+
+When all AI models fail, a template-based reading ensures users never see an error:
+
+<CodeGroup>
+```typescript src/actions/index.ts (lines 15-26)
+function getFallbackReading(name: string, cards: Array<{ name: string; reversed?: boolean }>) {
+  const [past, present, future] = cards;
+  return `Hola ${name}, vamos a ver qué dicen las cartas.
+
+En el pasado, ${past.name} ${past.reversed ? 'invertida' : 'al derecho'} marca el punto de partida de lo que estás viviendo. Algo de esa etapa todavía influye en tu situación actual.
+
+En el presente, ${present.name} ${present.reversed ? 'invertida' : 'al derecho'} refleja lo que está pasando ahora mismo. Esta carta te pide que prestes atención a cómo estás manejando la situación en este momento.
+
+Para el futuro, ${future.name} ${future.reversed ? 'invertida' : 'al derecho'} muestra hacia dónde se dirigen las cosas si seguís el camino actual. No es inevitable, pero es la tendencia más probable.
+
+Mi consejo: revisá qué de tu pasado todavía estás cargando sin necesidad, y enfocate en lo que sí podés cambiar hoy.`;
+}
+```
+</CodeGroup>
+
+<Note>
+  The fallback maintains the same structure (past/present/future) and tone as AI-generated readings for consistency.
+</Note>
+
+### Client-Side Error Handling
+
+The frontend handles various error scenarios:
+
+<CodeGroup>
+```typescript TarotForm.astro (lines 231-254)
+try {
+  const { data, error } = await actions.tarot.consult({ name, question, cards });
+
+  if (error) {
+    resetCards();
+    showSection('form');
+    if (error.code === 'BAD_REQUEST') {
+      showError('Los datos enviados no son válidos. Revisá el nombre y la consulta.');
+    } else {
+      showError('El oráculo no pudo completar tu lectura. Inténtalo de nuevo en unos momentos.');
+    }
+    return;
+  }
+
+  incrementUsage();
+  renderReading(data.reading);
+
+} catch {
+  resetCards();
+  showSection('form');
+  showError('No se pudo conectar con el oráculo. Verificá tu conexión e inténtalo de nuevo.');
+} finally {
+  submitBtn.disabled = false;
+}
+```
+</CodeGroup>
+
+## Content Safety
+
+The prompt includes explicit instructions to reject certain topics:
+
+<Warning>
+  **Health-related questions are automatically rejected** by the AI with a friendly redirection to medical professionals.
+</Warning>
+
+```typescript
+RESTRICCIONES: Si la pregunta trata sobre salud, enfermedades, diagnósticos médicos
+o embarazo, no respondas la consulta de tarot. En su lugar, indica amablemente que
+este servicio no aborda temas de salud y recomienda consultar a un profesional médico.
+```
+
+This is reinforced in the footer disclaimer:
+
+```html
+<p>No se responden consultas sobre salud, diagnósticos médicos ni embarazo.
+Para esos temas, consultá a un profesional.</p>
+```
+
+<Info>
+  See `src/pages/index.astro:94` for the full disclaimer text.
+</Info>
+
+## API Response Format
+
+The server action returns a simple JSON structure:
+
+```typescript
+return { reading: string };
+```
+
+**Example response:**
+```json
+{
+  "reading": "Hola María, vamos a ver qué dicen las cartas sobre tu pregunta.\n\nEn el pasado, El Loco al derecho marca el punto de partida...\n\nEn el presente, La Torre invertida refleja...\n\nPara el futuro, El Sol al derecho muestra...\n\nMi consejo: revisá qué de tu pasado todavía estás cargando sin necesidad."
+}
+```
+
+## Performance Considerations
+
+- **Streaming Not Used**: Full response returned at once for simplicity
+- **Timeout**: Vercel serverless functions have 10s timeout (adequate for Gemini Flash models)
+- **Caching**: Not implemented (each reading is unique)
+- **Concurrency**: No limits on server (Gemini API has its own rate limits)
+
+## Testing the Integration
+
+Test the AI integration locally:
+
+```bash
+# 1. Set up environment variable
+echo "GEMINI_API_KEY=your_key_here" > .env
+
+# 2. Start dev server
+bun dev
+
+# 3. Submit a test query through the form
+```
+
+Monitor the console for:
+- API call success/failure
+- Model fallback triggers
+- Fallback template usage
+
+<Note>
+  The development server will reload on code changes, making it easy to iterate on prompt engineering.
+</Note>
+
+## Cost Optimization
+
+Gemini Flash models are optimized for cost-effectiveness:
+
+- **gemini-2.5-flash**: $0.075 per 1M input tokens, $0.30 per 1M output tokens
+- **gemini-2.0-flash**: $0.05 per 1M input tokens, $0.20 per 1M output tokens
+- **gemini-2.0-flash-lite**: Free tier available
+
+With 250-word readings (~300 tokens output) and ~500 token prompts:
+- **Cost per reading**: ~$0.0003 (using gemini-2.5-flash)
+- **Free tier**: ~15,000 readings/month with gemini-2.0-flash-lite
+
+<Info>
+  Current pricing as of March 2026. Check [Google AI pricing](https://ai.google.dev/pricing) for updates.
+</Info>

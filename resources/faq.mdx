@@ -1,0 +1,108 @@
+---
+title: Frequently Asked Questions
+description: Common questions about Luz de Arcanos AI-powered tarot readings
+---
+
+## Frequently Asked Questions
+
+Find answers to the most common questions about using Luz de Arcanos.
+
+<Accordion title="How many consultations can I do per day?">
+  You can perform **5 consultations per day**. This limit resets every 24 hours from your first consultation of the day. The limit is tracked using your browser's localStorage to ensure fair usage of the AI service.
+  
+  If you've reached your daily limit, you'll see a message: "Alcanzaste el límite de 5 consultas por día. Volvé mañana para seguir explorando."
+</Accordion>
+
+<Accordion title="Is Luz de Arcanos free to use?">
+  Yes, Luz de Arcanos is completely **free and open source**. The 5 consultations per day limit helps manage API costs for the Google Gemini AI service that powers the readings.
+  
+  The project is available on GitHub and you can even run your own instance with your own Gemini API key for unlimited consultations.
+</Accordion>
+
+<Accordion title="What questions can I ask?">
+  You can ask about almost any area of your life:
+  - Career and professional decisions
+  - Relationships and love
+  - Personal growth and self-discovery
+  - Financial decisions
+  - Creative projects
+  - Life direction and purpose
+  
+  <Warning>
+    **Health questions are not supported.** If you ask about health, medical conditions, diagnoses, or pregnancy, Seraphina will politely decline and recommend consulting a medical professional instead. This is a safety feature built into the AI prompt.
+  </Warning>
+  
+  Your question can be up to 500 characters long, so feel free to provide context and details.
+</Accordion>
+
+<Accordion title="How accurate are the readings?">
+  Luz de Arcanos provides **interpretive guidance** rather than predictions. The AI (Seraphina) analyzes your question in context with three tarot cards drawn for past, present, and future positions.
+  
+  The readings are designed to be:
+  - **Reflective**: Help you think about your situation from new angles
+  - **Practical**: Offer actionable advice you can apply immediately
+  - **Empathetic**: Delivered in a warm, conversational tone
+  
+  <Info>
+    Like traditional tarot, the value comes from the insights and perspectives the reading provides, not from literal prediction of the future.
+  </Info>
+</Accordion>
+
+<Accordion title="Can I ask about health or medical issues?">
+  No. Luz de Arcanos has **built-in restrictions** that prevent it from addressing health-related questions. This includes:
+  - Medical conditions or diagnoses
+  - Physical or mental health concerns
+  - Pregnancy questions
+  - Treatment decisions
+  
+  If you ask a health-related question, Seraphina will respond with a polite message recommending you consult a qualified medical professional instead.
+  
+  This safety feature is implemented in the AI prompt at `src/actions/index.ts:73`.
+</Accordion>
+
+<Accordion title="What technology powers this application?">
+  Luz de Arcanos is built with modern web technologies:
+  
+  - **[Astro 5](https://astro.build)**: Framework with SSR and Server Actions
+  - **[Google Gemini API](https://ai.google.dev)**: AI models for generating personalized readings
+  - **TypeScript**: Type-safe code throughout
+  - **Pure CSS**: 3D card flip animations using `transform-style: preserve-3d`
+  - **[Vercel](https://vercel.com)**: Deployment and hosting
+  
+  The entire application is open source and available on GitHub.
+</Accordion>
+
+<Accordion title="How does the AI work?">
+  When you submit a consultation, here's what happens:
+  
+  1. **Card Selection**: Three random tarot cards are drawn from the 78-card deck (Major and Minor Arcana), each with a 50% chance of being reversed
+  
+  2. **AI Processing**: Your name, question, and the three cards (with their meanings and keywords) are sent to Google Gemini AI
+  
+  3. **Model Fallback**: The system tries multiple Gemini models in sequence (`gemini-2.5-flash`, `gemini-2.0-flash`, `gemini-2.0-flash-lite`) to handle API quota limits
+  
+  4. **Reading Generation**: The AI acts as "Seraphina," a professional tarotist, and creates a personalized reading (max 250 words) covering:
+     - Greeting and context
+     - Past: What brought you here
+     - Present: What's happening now
+     - Future: Where things are heading
+     - Practical advice you can apply
+  
+  5. **Fallback Response**: If all AI models fail, a basic templated reading is provided so you always get a response
+  
+  The entire process is implemented in `src/actions/index.ts:28-97`.
+</Accordion>
+
+<Accordion title='Why does the reading say "Seraphina"?'>
+  "Seraphina" is the persona name given to the AI in the system prompt. The AI is instructed to act as a professional, empathetic tarotist with a warm but direct and practical style.
+  
+  You'll see references to Seraphina in:
+  - Loading message: "Seraphina consulta las cartas para ti…"
+  - Reading interpretation: "Seraphina está interpretando las cartas…"
+  
+  This persona helps create a consistent, friendly tone that feels more personal than generic AI responses.
+</Accordion>
+
+<Note>
+  Have a question that isn't answered here? Check the [Support](/resources/support) page for troubleshooting help or visit the GitHub repository to open an issue.
+</Note>

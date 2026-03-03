@@ -1,0 +1,448 @@
+---
+title: 'Deployment Guide'
+description: 'Complete guide to deploying Luz de Arcanos on Vercel with SSR, environment variables, and build configuration'
+---
+
+## Overview
+
+Luz de Arcanos is optimized for deployment on **Vercel** using Astro's SSR (Server-Side Rendering) mode. This guide covers the complete deployment process from local development to production.
+
+## Prerequisites
+
+<ParamField path="Node.js" type="string" required>
+  Node.js 18+ or Bun runtime
+</ParamField>
+
+<ParamField path="Vercel Account" type="string" required>
+  Free account at [vercel.com](https://vercel.com)
+</ParamField>
+
+<ParamField path="Gemini API Key" type="string" required>
+  Obtain from [Google AI Studio](https://aistudio.google.com)
+</ParamField>
+
+<ParamField path="Git Repository" type="string" required>
+  GitHub, GitLab, or Bitbucket repository
+</ParamField>
+
+## Local Development Setup
+
+### 1. Clone and Install
+
+```bash
+# Clone the repository
+git clone <repository-url>
+cd tarotweb
+
+# Install dependencies
+bun install
+```
+
+### 2. Configure Environment Variables
+
+Create a `.env` file in the project root:
+
+```bash
+# Copy the example file
+cp .env.example .env
+
+# Edit with your API key
+echo "GEMINI_API_KEY=your_actual_api_key_here" > .env
+```
+
+<Warning>
+  Never commit `.env` to version control. The `.gitignore` should already exclude it.
+</Warning>
+
+### 3. Run Development Server
+
+```bash
+bun dev
+```
+
+The application will be available at `http://localhost:4321`.
+
+<CodeGroup>
+```json package.json (scripts)
+{
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro"
+  }
+}
+```
+</CodeGroup>
+
+<Info>
+  See `package.json:5-9` for all available scripts.
+</Info>
+
+## Vercel Deployment
+
+### Method 1: Vercel CLI (Recommended)
+
+#### Install Vercel CLI
+
+```bash
+npm i -g vercel
+```
+
+#### Deploy from Command Line
+
+```bash
+# First deployment (follow prompts)
+vercel
+
+# Set production environment variable
+vercel env add GEMINI_API_KEY production
+# Paste your API key when prompted
+
+# Deploy to production
+vercel --prod
+```
+
+<Note>
+  The first `vercel` command creates a preview deployment. Use `vercel --prod` for production.
+</Note>
+
+### Method 2: GitHub Integration (Automated)
+
+#### 1. Connect Repository to Vercel
+
+1. Go to [vercel.com/new](https://vercel.com/new)
+2. Click "Import Project"
+3. Select your Git provider (GitHub, GitLab, Bitbucket)
+4. Choose the repository
+5. Vercel will auto-detect Astro configuration
+
+#### 2. Configure Environment Variables
+
+In the Vercel dashboard:
+
+1. Go to **Project Settings** → **Environment Variables**
+2. Add variable:
+   - **Key**: `GEMINI_API_KEY`
+   - **Value**: Your Gemini API key
+   - **Environments**: Production, Preview (optional), Development (optional)
+3. Click **Save**
+
+<CodeGroup>
+```bash Vercel Dashboard > Environment Variables
+GEMINI_API_KEY=AIza...your_key_here
+```
+</CodeGroup>
+
+#### 3. Deploy
+
+Click **Deploy**. Vercel will:
+1. Install dependencies
+2. Run `bun build`
+3. Deploy serverless functions
+4. Assign a production URL
+
+<Info>
+  Every push to `main` branch will trigger automatic production deployments. Pull requests create preview deployments.
+</Info>
+
+## Build Configuration
+
+### Astro SSR Adapter
+
+The project uses the **Vercel adapter** for SSR:
+
+<CodeGroup>
+```javascript astro.config.mjs
+import { defineConfig } from 'astro/config';
+import vercel from '@astrojs/vercel';
+
+export default defineConfig({
+  output: 'server',  // Enable SSR mode
+  adapter: vercel(), // Vercel serverless adapter
+});
+```
+</CodeGroup>
+
+<ParamField path="output" type="string" default="server">
+  **`server`** mode enables SSR. Every route is rendered on-demand.
+</ParamField>
+
+<ParamField path="adapter" type="function" default="vercel()">
+  The Vercel adapter transforms Astro pages into Vercel serverless functions.
+</ParamField>
+
+<Info>
+  See `astro.config.mjs:1-9` for the complete configuration.
+</Info>
+
+### Build Output
+
+Running `bun build` produces:
+
+```
+dist/
+├── _worker.js/       # Serverless function handlers
+├── client/           # Static assets (CSS, JS, images)
+└── server/           # SSR entry points
+```
+
+### Vercel Function Configuration
+
+Vercel automatically configures:
+- **Runtime**: Node.js 18.x (or Bun if detected)
+- **Memory**: 1024 MB (default)
+- **Timeout**: 10 seconds (Hobby), 60 seconds (Pro)
+- **Regions**: Auto (deployed globally)
+
+<Note>
+  The 10-second timeout is sufficient for Gemini API calls (~1-3 seconds average).
+</Note>
+
+## Environment Variables
+
+### Required Variables
+
+<ParamField path="GEMINI_API_KEY" type="string" required>
+  Google Gemini API key. Obtain from [Google AI Studio](https://aistudio.google.com).
+  
+  **Format**: `AIza...` (39 characters)
+</ParamField>
+
+### Optional Variables
+
+<ParamField path="NODE_ENV" type="string" default="production">
+  Automatically set by Vercel. Use `development` for local testing.
+</ParamField>
+
+### Setting Variables Locally
+
+```bash
+# .env file
+GEMINI_API_KEY=AIzaSyC...
+```
+
+### Setting Variables on Vercel
+
+**Via CLI:**
+```bash
+vercel env add GEMINI_API_KEY production
+```
+
+**Via Dashboard:**
+1. Project Settings → Environment Variables
+2. Add `GEMINI_API_KEY`
+3. Select environments (Production, Preview, Development)
+4. Save
+
+<Warning>
+  After adding/changing environment variables, you must **redeploy** for changes to take effect.
+</Warning>
+
+## Deployment Checklist
+
+- [ ] Repository pushed to GitHub/GitLab/Bitbucket
+- [ ] `.env` file created locally (not committed)
+- [ ] Gemini API key obtained from Google AI Studio
+- [ ] Vercel account created
+- [ ] Repository connected to Vercel
+- [ ] `GEMINI_API_KEY` environment variable set on Vercel
+- [ ] First deployment successful
+- [ ] Production URL tested
+- [ ] Custom domain configured (optional)
+
+## Custom Domain Setup
+
+### Add Domain to Vercel
+
+1. Go to **Project Settings** → **Domains**
+2. Enter your domain (e.g., `luzdearcanos.com`)
+3. Follow DNS configuration instructions
+4. Wait for DNS propagation (5 minutes - 24 hours)
+
+### DNS Configuration
+
+Add these records to your DNS provider:
+
+```
+Type    Name    Value
+A       @       76.76.21.21
+CNAME   www     cname.vercel-dns.com
+```
+
+<Info>
+  Vercel automatically provisions SSL certificates via Let's Encrypt.
+</Info>
+
+## Monitoring & Logs
+
+### View Deployment Logs
+
+**Via CLI:**
+```bash
+vercel logs <deployment-url>
+```
+
+**Via Dashboard:**
+1. Go to **Deployments**
+2. Click on a deployment
+3. View **Build Logs** or **Function Logs**
+
+### Monitor Function Performance
+
+Vercel Pro provides:
+- Function execution time
+- Memory usage
+- Error rates
+- Geographic distribution
+
+<Note>
+  Hobby plan includes basic logs. Upgrade to Pro for advanced analytics.
+</Note>
+
+## Troubleshooting
+
+### Build Fails: "GEMINI_API_KEY not found"
+
+**Cause**: Environment variable not set on Vercel.
+
+**Solution**:
+```bash
+vercel env add GEMINI_API_KEY production
+# Redeploy
+vercel --prod
+```
+
+### Runtime Error: "429 Rate Limit Exceeded"
+
+**Cause**: Gemini API quota exceeded.
+
+**Solution**: The application automatically falls back to alternative models and then to template-based readings. No action needed.
+
+### Build Warning: "trustedDependencies"
+
+**Cause**: `protobufjs` requires post-install scripts.
+
+**Solution**: Already handled in `package.json:16-18`:
+```json
+"trustedDependencies": [
+  "protobufjs"
+]
+```
+
+### SSR Not Working
+
+**Cause**: Adapter not configured.
+
+**Solution**: Verify `astro.config.mjs`:
+```javascript
+export default defineConfig({
+  output: 'server',      // Must be 'server'
+  adapter: vercel(),     // Must include adapter
+});
+```
+
+## Performance Optimization
+
+### Edge Functions (Advanced)
+
+For ultra-low latency, upgrade to Vercel Edge Functions:
+
+```javascript
+// astro.config.mjs
+import vercel from '@astrojs/vercel';
+
+export default defineConfig({
+  output: 'server',
+  adapter: vercel({
+    edgeMiddleware: true, // Enable Edge Runtime
+  }),
+});
+```
+
+<Warning>
+  Edge Functions have limitations (no Node.js APIs). Test thoroughly before deploying.
+</Warning>
+
+### Static Asset Optimization
+
+- **Images**: Compress with tools like [Squoosh](https://squoosh.app)
+- **Video**: Optimize background video (720p is sufficient)
+- **Fonts**: Preconnect to Google Fonts (already configured)
+
+### Caching Headers
+
+Add caching for static assets:
+
+```json
+// vercel.json (optional)
+{
+  "headers": [
+    {
+      "source": "/cards/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    }
+  ]
+}
+```
+
+## Rollback & Versioning
+
+### Rollback to Previous Deployment
+
+**Via Dashboard:**
+1. Go to **Deployments**
+2. Find previous successful deployment
+3. Click **⋮** → **Promote to Production**
+
+**Via CLI:**
+```bash
+vercel rollback
+```
+
+### Git-based Versioning
+
+```bash
+# Create release tag
+git tag -a v1.0.0 -m "Production release"
+git push origin v1.0.0
+
+# Rollback to tag
+git checkout v1.0.0
+vercel --prod
+```
+
+<Info>
+  Vercel keeps deployment history for 30 days (Hobby) or unlimited (Pro).
+</Info>
+
+## Production Checklist
+
+- [ ] Environment variables verified in production
+- [ ] Test consultation flow end-to-end
+- [ ] Check mobile responsiveness
+- [ ] Verify SEO meta tags (Open Graph, Twitter Card)
+- [ ] Test usage limit (5 consultations)
+- [ ] Confirm fallback reading works (simulate API failure)
+- [ ] Check video background loads on mobile
+- [ ] Validate SSL certificate
+- [ ] Set up monitoring alerts (Pro plan)
+
+## Next Steps
+
+After successful deployment:
+
+1. **Monitor usage**: Check Vercel analytics
+2. **Set up alerts**: Configure email notifications for errors
+3. **Optimize costs**: Review Gemini API usage
+4. **Add analytics**: Integrate Google Analytics or Plausible
+5. **Custom domain**: Configure your own domain name
+
+<Note>
+  Live demo: [luzdearcanos.vercel.app](https://luzdearcanos.vercel.app/)
+</Note>

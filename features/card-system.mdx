@@ -1,0 +1,255 @@
+---
+title: Tarot card system
+description: Explore the 78-card Rider-Waite tarot deck implementation, including Major and Minor Arcana, upright and reversed meanings.
+---
+
+## Overview
+
+Luz de Arcanos implements a complete 78-card Rider-Waite tarot deck with full upright and reversed interpretations. The system handles card drawing, randomization, and orientation assignment.
+
+## Deck structure
+
+The tarot deck consists of two main groups:
+
+<Tabs>
+  <Tab title="Major Arcana">
+    **22 cards** (IDs 0-21)
+    
+    Major life themes and spiritual lessons:
+    - The Fool (El Loco)
+    - The Magician (El Mago)
+    - The High Priestess (La Sacerdotisa)
+    - The Empress (La Emperatriz)
+    - The Emperor (El Emperador)
+    - And 17 more archetypal cards...
+  </Tab>
+  <Tab title="Minor Arcana">
+    **56 cards** (IDs 22-77)
+    
+    Four suits representing different life aspects:
+    - **Bastos (Wands)**: Inspiration, creativity, passion
+    - **Oros (Pentacles)**: Material world, prosperity, work
+    - **Copas (Cups)**: Emotions, relationships, intuition
+    - **Espadas (Swords)**: Intellect, conflict, truth
+    
+    Each suit contains 14 cards: Ace through 10, plus Page, Knight, Queen, and King.
+  </Tab>
+</Tabs>
+
+## TarotCard interface
+
+Each card is defined with the following TypeScript interface:
+
+```typescript
+export interface TarotCard {
+  id: number;
+  name: string;
+  image: string;
+  uprightKeywords: string[];
+  reversedKeywords: string[];
+  description: string;
+  reversed: boolean;
+}
+```
+
+### Field descriptions
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | number | Unique identifier (0-77) |
+| `name` | string | Card name in Spanish |
+| `image` | string | Image filename (e.g., "00_Fool.jpg") |
+| `uprightKeywords` | string[] | Keywords for upright orientation |
+| `reversedKeywords` | string[] | Keywords for reversed orientation |
+| `description` | string | Poetic description of card essence |
+| `reversed` | boolean | Current orientation (set during draw) |
+
+## Card data examples
+
+<CodeGroup>
+```typescript Major Arcana example
+{
+  id: 0,
+  name: 'El Loco',
+  image: '00_Fool.jpg',
+  uprightKeywords: ['nuevos comienzos', 'aventura', 'inocencia', 'libertad'],
+  reversedKeywords: ['imprudencia', 'ingenuidad', 'caos', 'locura'],
+  description: 'El inicio de un viaje, potencial ilimitado y espíritu libre dispuesto a todo',
+}
+```
+
+```typescript Bastos (Wands) example
+{
+  id: 22,
+  name: 'As de Bastos',
+  image: '22_Ace_of_Wands.jpg',
+  uprightKeywords: ['nueva inspiración', 'potencial creativo', 'inicio', 'energía'],
+  reversedKeywords: ['bloqueo creativo', 'demoras', 'falta de energía', 'frustración'],
+  description: 'Chispa de inspiración pura, el impulso inicial de un proyecto apasionante que aguarda nacer',
+}
+```
+
+```typescript Copas (Cups) example
+{
+  id: 50,
+  name: 'As de Copas',
+  image: '50_Ace_of_Cups.jpg',
+  uprightKeywords: ['nuevo amor', 'apertura emocional', 'intuición', 'compasión'],
+  reversedKeywords: ['bloqueo emocional', 'amor reprimido', 'vacío interior', 'desbordamiento'],
+  description: 'Desbordamiento de amor puro, apertura del corazón y el inicio de una conexión emocional profunda',
+}
+```
+
+```typescript Espadas (Swords) example
+{
+  id: 64,
+  name: 'As de Espadas',
+  image: '64_Ace_of_Swords.jpg',
+  uprightKeywords: ['claridad mental', 'verdad', 'ruptura de ilusiones', 'nueva idea'],
+  reversedKeywords: ['confusión', 'verdad dolorosa evadida', 'pensamiento caótico', 'bloqueo mental'],
+  description: 'Espada de la verdad que corta toda ilusión, claridad mental que abre el camino y nueva idea que transforma',
+}
+```
+</CodeGroup>
+
+## Upright vs reversed meanings
+
+Each card has two distinct interpretations based on its orientation:
+
+<Accordion title="Understanding reversals">
+  **Upright cards** represent the card's primary energy in its most direct form.
+  
+  **Reversed cards** can indicate:
+  - Blocked or weakened energy
+  - The shadow side of the card
+  - Internalized or delayed manifestation
+  - Opposition to the upright meaning
+  
+  Example with The Sun (El Sol):
+  - **Upright**: alegría, éxito, vitalidad, claridad
+  - **Reversed**: exceso de ego, tristeza temporal, optimismo forzado, bloqueo
+</Accordion>
+
+## Card drawing algorithm
+
+The `drawCards` function handles card selection and orientation:
+
+```typescript
+export function drawCards(n: number): TarotCard[] {
+  const shuffled = [...allCards].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, n).map((card) => ({
+    ...card,
+    reversed: Math.random() > 0.6,
+  }));
+}
+```
+
+### How it works
+
+1. **Shuffle**: Creates a copy of `allCards` and randomizes order using `Math.random() - 0.5`
+2. **Select**: Takes the first `n` cards from the shuffled deck
+3. **Orient**: Each card has a 40% chance of being reversed (`Math.random() > 0.6`)
+
+<Info>
+The 40% reversal rate (60/40 split) provides a balanced mix of upright and reversed cards without overwhelming the reading with reversals.
+</Info>
+
+### Usage example
+
+```typescript
+import { drawCards } from '../data/cards';
+
+// Draw 3 cards for a past-present-future reading
+const cards = drawCards(3);
+
+cards.forEach(card => {
+  console.log(`${card.name} - ${card.reversed ? 'Reversed' : 'Upright'}`);
+});
+```
+
+## Three-card spread
+
+Luz de Arcanos uses a classic three-card spread:
+
+| Position | Meaning | Purpose |
+|----------|---------|----------|
+| Past | What brought you here | Foundation and influences |
+| Present | What's happening now | Current situation and energies |
+| Future | What's coming | Likely outcome if path continues |
+
+```typescript
+const positions = ['Pasado', 'Presente', 'Futuro'] as const;
+```
+
+## Complete card data structure
+
+The full deck is exported as `allCards` in src/data/cards.ts:
+
+```typescript
+export const allCards: Omit<TarotCard, 'reversed'>[] = [
+  // ── ARCANOS MAYORES ─────────────────────────────────────────
+  { id: 0, name: 'El Loco', ... },
+  { id: 1, name: 'El Mago', ... },
+  // ... 20 more major arcana cards
+  
+  // ── BASTOS ──────────────────────────────────────────────────
+  { id: 22, name: 'As de Bastos', ... },
+  // ... 13 more wands cards
+  
+  // ── OROS ────────────────────────────────────────────────────
+  { id: 36, name: 'As de Oros', ... },
+  // ... 13 more pentacles cards
+  
+  // ── COPAS ───────────────────────────────────────────────────
+  { id: 50, name: 'As de Copas', ... },
+  // ... 13 more cups cards
+  
+  // ── ESPADAS ─────────────────────────────────────────────────
+  { id: 64, name: 'As de Espadas', ... },
+  // ... 13 more swords cards
+];
+```
+
+<Note>
+The `reversed` property is omitted from the stored data and added dynamically during the draw to keep the data structure clean.
+</Note>
+
+## Card images
+
+Each card references an image file stored in the `/public/cards/` directory:
+
+```typescript
+image: '00_Fool.jpg'  // Resolves to /cards/00_Fool.jpg
+```
+
+Images are displayed with:
+
+```html
+<img
+  src="/cards/${card.image}"
+  alt="${card.name}"
+  class="card-image"
+  loading="lazy"
+/>
+```
+
+## Keyword system
+
+Keywords provide quick energy indicators for both AI interpretation and user understanding:
+
+```typescript
+// The Fool upright
+uprightKeywords: ['nuevos comienzos', 'aventura', 'inocencia', 'libertad']
+
+// The Fool reversed
+reversedKeywords: ['imprudencia', 'ingenuidad', 'caos', 'locura']
+```
+
+These keywords are:
+- Sent to the AI for context
+- Used in fallback readings
+- Displayed in the card interface
+
+<Warning>
+Keywords are in Spanish to match the application's language and cultural context.
+</Warning>

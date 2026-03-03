@@ -1,0 +1,317 @@
+---
+title: Daily consultation limits
+description: Learn how Luz de Arcanos implements a 5-consultation daily limit using localStorage and 24-hour rolling windows.
+---
+
+## Overview
+
+Luz de Arcanos limits users to 5 tarot consultations per 24-hour period. This system uses browser localStorage to track usage and implements a rolling 24-hour window for fair access.
+
+## Limit configuration
+
+The system constants are defined in src/components/TarotForm.astro:177-179:
+
+```typescript
+const LIMIT = 5;
+const WINDOW_MS = 24 * 60 * 60 * 1000;
+const STORAGE_KEY = 'tarot_usage';
+```
+
+| Constant | Value | Purpose |
+|----------|-------|----------|
+| `LIMIT` | 5 | Maximum consultations per window |
+| `WINDOW_MS` | 86,400,000ms | 24-hour window in milliseconds |
+| `STORAGE_KEY` | 'tarot_usage' | localStorage key for tracking data |
+
+<Info>
+24 hours in milliseconds: 24 × 60 × 60 × 1000 = 86,400,000
+</Info>
+
+## Data structure
+
+Usage data is stored as JSON in localStorage:
+
+```typescript
+interface UsageData {
+  count: number;      // Number of consultations in current window
+  firstUse: number;   // Timestamp of first consultation in window
+}
+```
+
+### Example stored data
+
+```json
+{
+  "count": 3,
+  "firstUse": 1709481600000
+}
+```
+
+This indicates the user has performed 3 consultations, with the first one at timestamp 1709481600000.
+
+## Reading usage data
+
+The `getUsage()` function retrieves and parses stored data:
+
+```typescript
+function getUsage(): { count: number; firstUse: number } {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return { count: 0, firstUse: Date.now() };
+}
+```
+
+<Accordion title="Error handling">
+  The try-catch block handles:
+  - localStorage being unavailable (private browsing)
+  - Corrupted JSON data
+  - Missing data
+  
+  In all error cases, it returns a fresh usage object with count 0.
+</Accordion>
+
+## Incrementing usage
+
+After each successful consultation, the counter increments:
+
+```typescript
+function incrementUsage(): void {
+  const usage = getUsage();
+  const now = Date.now();
+  const reset = now - usage.firstUse >= WINDOW_MS;
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({
+    count: reset ? 1 : usage.count + 1,
+    firstUse: reset ? now : usage.firstUse,
+  }));
+}
+```
+
+### How the rolling window works
+
+<Tabs>
+  <Tab title="Within window">
+    If less than 24 hours have passed since `firstUse`:
+    - Increment the existing count
+    - Keep the original `firstUse` timestamp
+    
+    ```typescript
+    count: usage.count + 1
+    firstUse: usage.firstUse  // unchanged
+    ```
+  </Tab>
+  <Tab title="Window expired">
+    If 24+ hours have passed since `firstUse`:
+    - Reset count to 1 (this consultation)
+    - Set new `firstUse` to current time
+    
+    ```typescript
+    count: 1
+    firstUse: Date.now()
+    ```
+  </Tab>
+</Tabs>
+
+<Note>
+This creates a rolling 24-hour window, not a daily reset at midnight. Each window is personal to when the user started their current period.
+</Note>
+
+## Checking remaining readings
+
+Before allowing a consultation, the system checks available readings:
+
+```typescript
+function getRemainingReadings(): number {
+  const usage = getUsage();
+  if (Date.now() - usage.firstUse >= WINDOW_MS) return LIMIT;
+  return Math.max(0, LIMIT - usage.count);
+}
+```
+
+### Logic breakdown
+
+1. Get current usage data
+2. Check if window has expired
+   - **Yes**: Return full limit (5 readings available)
+   - **No**: Return remaining count (5 - current count)
+3. Use `Math.max(0, ...)` to prevent negative values
+
+## Pre-submission validation
+
+The form validates the limit before processing:
+
+```typescript
+tarotForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  clearError();
+
+  const name     = (document.getElementById('name') as HTMLInputElement).value.trim();
+  const question = (document.getElementById('question') as HTMLTextAreaElement).value.trim();
+
+  if (!name) { showError('Por favor ingresa tu nombre.'); return; }
+  if (!question) { showError('Por favor ingresa tu consulta.'); return; }
+
+  if (getRemainingReadings() <= 0) {
+    showError('Alcanzaste el límite de 5 consultas por día. Volvé mañana para seguir explorando.');
+    return;
+  }
+
+  // ... proceed with consultation
+});
+```
+
+<Warning>
+The limit check happens before drawing cards or calling the API, preventing wasted resources on blocked consultations.
+</Warning>
+
+## Increment timing
+
+The counter increments only after successful API response:
+
+```typescript
+try {
+  const { data, error } = await actions.tarot.consult({ name, question, cards });
+
+  if (error) {
+    resetCards();
+    showSection('form');
+    if (error.code === 'BAD_REQUEST') {
+      showError('Los datos enviados no son válidos. Revisá el nombre y la consulta.');
+    } else {
+      showError('El oráculo no pudo completar tu lectura. Inténtalo de nuevo en unos momentos.');
+    }
+    return;
+  }
+
+  incrementUsage();  // Only increments on success
+  renderReading(data.reading);
+
+} catch {
+  resetCards();
+  showSection('form');
+  showError('No se pudo conectar con el oráculo. Verificá tu conexión e inténtalo de nuevo.');
+} finally {
+  submitBtn.disabled = false;
+}
+```
+
+<Info>
+Failed consultations don't count against the limit - only successful readings increment the counter.
+</Info>
+
+## Error message display
+
+When the limit is reached, users see a friendly error:
+
+```typescript
+function showError(msg: string) {
+  errorMsg.textContent = msg;
+  errorMsg.classList.add('active');
+  submitBtn.disabled = false;
+}
+```
+
+With CSS styling:
+
+```css
+.error-message {
+  background: rgba(220, 38, 38, 0.1);
+  border: 1px solid rgba(220, 38, 38, 0.3);
+  border-radius: 8px;
+  padding: 1rem;
+  color: #fca5a5;
+  margin-top: 1rem;
+  font-size: 0.95rem;
+  display: none;
+}
+
+.error-message.active {
+  display: block;
+}
+```
+
+## Complete flow diagram
+
+<Accordion title="Consultation flow with limits">
+  1. User submits form
+  2. Validate name and question
+  3. **Check remaining readings**
+     - If 0: Show limit error, stop
+     - If > 0: Continue
+  4. Draw 3 random cards
+  5. Call AI API for reading
+  6. **On success**: Increment usage counter
+  7. Display reading to user
+  8. **On error**: Don't increment (failed requests are free)
+</Accordion>
+
+## localStorage persistence
+
+### Advantages
+
+- Client-side tracking (no server database needed)
+- Persists across page refreshes
+- Instant access (no network calls)
+- Simple implementation
+
+### Limitations
+
+<Warning>
+Users can bypass limits by:
+- Clearing browser data
+- Using incognito/private mode
+- Switching browsers
+- Editing localStorage manually
+
+For critical rate limiting, implement server-side tracking with user accounts or IP-based limits.
+</Warning>
+
+## Remaining readings display
+
+To show users their remaining consultations:
+
+```typescript
+const remaining = getRemainingReadings();
+console.log(`You have ${remaining} reading(s) remaining today.`);
+```
+
+You could display this in the UI:
+
+```html
+<p class="readings-counter">
+  Consultas restantes hoy: <strong id="remaining-count">5</strong>
+</p>
+```
+
+```typescript
+document.getElementById('remaining-count')!.textContent = getRemainingReadings().toString();
+```
+
+## Manual reset
+
+Users can manually clear their usage data:
+
+```typescript
+localStorage.removeItem('tarot_usage');
+```
+
+Or reset to specific values:
+
+```typescript
+localStorage.setItem('tarot_usage', JSON.stringify({
+  count: 0,
+  firstUse: Date.now()
+}));
+```
+
+## Future enhancements
+
+<Accordion title="Possible improvements">
+  - **User accounts**: Track limits server-side by user ID
+  - **Premium tier**: Offer unlimited readings for paying users
+  - **IP-based limiting**: Prevent incognito bypass
+  - **Grace period**: Allow one extra reading if very close to window reset
+  - **Analytics**: Track usage patterns to optimize the limit
+  - **Custom windows**: Let users choose 12-hour or 48-hour windows
+</Accordion>

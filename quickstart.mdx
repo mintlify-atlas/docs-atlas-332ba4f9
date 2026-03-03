@@ -1,80 +1,143 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quick start
+description: Get Luz de Arcanos running locally in under 5 minutes
 ---
 
-## Get started in three steps
+This guide will help you install and run Luz de Arcanos on your local machine.
 
-Get your documentation site running locally and make your first customization.
+## Prerequisites
 
-### Step 1: Set up your local environment
+Before you begin, ensure you have:
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
+- Node.js 18+ or Bun installed
+- A Google AI API key from [Google AI Studio](https://aistudio.google.com)
+
+## Installation
+
+<Steps>
+  <Step title="Clone the repository">
+    Clone the Luz de Arcanos repository to your local machine:
     
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
+    ```bash
+    git clone <repository-url>
+    cd tarotweb
+    ```
+  </Step>
+
+  <Step title="Install dependencies">
+    Install the required packages using Bun or npm:
     
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
+    <CodeGroup>
+      ```bash Bun
+      bun install
+      ```
+      
+      ```bash npm
+      npm install
+      ```
+    </CodeGroup>
     
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+    The project uses these core dependencies:
+    - `astro` (v5.17.1) — Framework with SSR support
+    - `@astrojs/vercel` (v9.0.4) — Vercel adapter for deployment
+    - `@google/genai` (v1.42.0) — Google Gemini AI SDK
+  </Step>
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+  <Step title="Configure environment variables">
+    Create a `.env` file in the root directory and add your Google Gemini API key:
+    
+    ```bash .env
+    GEMINI_API_KEY=your_api_key_here
+    ```
+    
+    <Note>
+      Get your free API key from [Google AI Studio](https://aistudio.google.com). The application will not function without this key.
+    </Note>
+  </Step>
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+  <Step title="Start the development server">
+    Run the development server:
+    
+    <CodeGroup>
+      ```bash Bun
+      bun dev
+      ```
+      
+      ```bash npm
+      npm run dev
+      ```
+    </CodeGroup>
+    
+    The application will start at `http://localhost:4321` by default.
+  </Step>
 
-### Step 3: Go live
+  <Step title="Make your first consultation">
+    Open your browser and navigate to `http://localhost:4321`. You'll see:
+    
+    1. A form requesting your name and question
+    2. After submitting, three cards will flip to reveal your reading
+    3. The AI will generate a personalized interpretation
+    
+    <Info>
+      You're limited to 5 consultations per day. This limit is stored in `localStorage` and resets after 24 hours.
+    </Info>
+  </Step>
+</Steps>
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+## Available scripts
+
+The `package.json` includes these scripts:
+
+```json package.json
+{
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview"
+  }
+}
+```
+
+- `dev` — Start the development server with hot reload
+- `build` — Build the application for production
+- `preview` — Preview the production build locally
+
+## Troubleshooting
+
+### API key not configured
+
+If you see an error about `GEMINI_API_KEY`, ensure:
+
+1. Your `.env` file exists in the root directory
+2. The variable is named exactly `GEMINI_API_KEY`
+3. You've restarted the development server after creating the `.env` file
+
+### Rate limit errors (429)
+
+The application automatically falls back between these Gemini models:
+
+1. `gemini-2.5-flash` (primary)
+2. `gemini-2.0-flash` (fallback)
+3. `gemini-2.0-flash-lite` (final fallback)
+
+If all models fail, a static fallback reading is generated based on the drawn cards.
+
+### Client-side consultation limit
+
+If you've reached the 5-consultation daily limit:
+
+1. Wait 24 hours for the limit to reset
+2. Or clear your browser's `localStorage` for the site
+3. The limit is tracked using the key `tarot_usage`
 
 ## Next steps
 
-Now that you have your docs running, explore these key features:
-
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="How it works" icon="lightbulb" href="/how-it-works">
+    Understand the application flow and card drawing mechanism
+  </Card>
+  
+  <Card title="View live demo" icon="globe" href="https://luzdearcanos.vercel.app/">
+    See the production version in action
+  </Card>
 </CardGroup>
-
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>

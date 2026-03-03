@@ -1,0 +1,504 @@
+---
+title: 'Configuration Reference'
+description: 'Complete reference for environment variables, Astro configuration, package.json scripts, and usage limits'
+---
+
+## Environment Variables
+
+All environment variables are loaded from `.env` file in development and from Vercel dashboard in production.
+
+<Info>
+  See `.env.example:1-2` for the environment variable template.
+</Info>
+
+### GEMINI_API_KEY
+
+<ParamField path="GEMINI_API_KEY" type="string" required>
+  Google Gemini API key for AI-powered tarot reading generation.
+  
+  **Obtain from**: [Google AI Studio](https://aistudio.google.com/)
+  
+  **Format**: `AIza` prefix followed by 35 characters (total 39 chars)
+  
+  **Example**: `AIzaSyC1234567890abcdefghijklmnopqr`
+  
+  **Used in**: `src/actions/index.ts:37`
+  
+  **Security**: Never exposed to client. Only accessible in server actions via `import.meta.env.GEMINI_API_KEY`
+</ParamField>
+
+#### Setting the API Key
+
+<CodeGroup>
+```bash Local Development (.env)
+# Create .env file in project root
+GEMINI_API_KEY=your_gemini_api_key_here
+```
+
+```bash Vercel CLI
+# Add to production environment
+vercel env add GEMINI_API_KEY production
+
+# Add to preview environment
+vercel env add GEMINI_API_KEY preview
+```
+
+```bash Vercel Dashboard
+# Navigate to: Project Settings → Environment Variables
+# Add:
+#   Key: GEMINI_API_KEY
+#   Value: your_gemini_api_key_here
+#   Environments: Production, Preview, Development
+```
+</CodeGroup>
+
+<Warning>
+  Missing `GEMINI_API_KEY` will cause server actions to throw: `"GEMINI_API_KEY no configurada"`
+</Warning>
+
+### NODE_ENV
+
+<ParamField path="NODE_ENV" type="string" default="production">
+  Node.js environment mode. Automatically set by Vercel.
+  
+  **Possible values**:
+  - `development` - Local development server
+  - `production` - Production deployment
+  - `test` - Testing environment (if configured)
+  
+  **Set automatically by**:
+  - `bun dev` → `development`
+  - `vercel --prod` → `production`
+  
+  **Not required**: This variable is automatically managed.
+</ParamField>
+
+## Astro Configuration
+
+Configuration is defined in `astro.config.mjs`.
+
+<CodeGroup>
+```javascript astro.config.mjs
+import { defineConfig } from 'astro/config';
+import vercel from '@astrojs/vercel';
+
+export default defineConfig({
+  output: 'server',
+  adapter: vercel(),
+});
+```
+</CodeGroup>
+
+### output
+
+<ParamField path="output" type="string" default="server" required>
+  Rendering mode for Astro pages.
+  
+  **Value**: `"server"` (SSR - Server-Side Rendering)
+  
+  **Effect**: All routes are rendered on-demand per request, enabling:
+  - Dynamic content generation
+  - Server actions (API endpoints)
+  - Environment variable access
+  - Session/cookie handling
+  
+  **Alternative values** (not used in this project):
+  - `"static"` - Pre-render all pages at build time
+  - `"hybrid"` - Mix of static and server-rendered pages
+  
+  **Location**: `astro.config.mjs:7`
+</ParamField>
+
+<Warning>
+  Changing `output` to `"static"` will break server actions. AI functionality requires SSR.
+</Warning>
+
+### adapter
+
+<ParamField path="adapter" type="function" default="vercel()" required>
+  Deployment adapter for SSR.
+  
+  **Package**: `@astrojs/vercel` (version `^9.0.4`)
+  
+  **Purpose**: Transforms Astro SSR output into Vercel serverless functions
+  
+  **Features enabled**:
+  - Automatic serverless function creation
+  - Edge runtime support (optional)
+  - Environment variable injection
+  - Request/response handling
+  
+  **Configuration options** (all optional):
+  ```javascript
+  adapter: vercel({
+    edgeMiddleware: false,    // Use Edge Runtime
+    functionPerRoute: false,  // Separate function per route
+    maxDuration: 10,          // Function timeout (seconds)
+  })
+  ```
+  
+  **Location**: `astro.config.mjs:8`
+</ParamField>
+
+<Note>
+  The default configuration (no options) is optimal for this project.
+</Note>
+
+## Package.json Scripts
+
+<CodeGroup>
+```json package.json
+{
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro"
+  }
+}
+```
+</CodeGroup>
+
+### dev
+
+<ParamField path="npm run dev" type="script">
+  **Command**: `astro dev`
+  
+  **Purpose**: Start local development server with hot reload
+  
+  **Server**: `http://localhost:4321`
+  
+  **Features**:
+  - Auto-restart on code changes
+  - Source maps for debugging
+  - Fast HMR (Hot Module Replacement)
+  - Environment variable loading from `.env`
+  
+  **Usage**:
+  ```bash
+  bun dev
+  # or
+  npm run dev
+  ```
+  
+  **Port override**:
+  ```bash
+  bun dev -- --port 3000
+  ```
+</ParamField>
+
+### build
+
+<ParamField path="npm run build" type="script">
+  **Command**: `astro build`
+  
+  **Purpose**: Create production-ready build
+  
+  **Output directory**: `dist/`
+  
+  **Build steps**:
+  1. Compile TypeScript
+  2. Bundle CSS and JavaScript
+  3. Optimize images
+  4. Generate serverless function handlers
+  5. Create static asset manifest
+  
+  **Usage**:
+  ```bash
+  bun build
+  # or
+  npm run build
+  ```
+  
+  **Vercel**: This command runs automatically during deployment
+</ParamField>
+
+### preview
+
+<ParamField path="npm run preview" type="script">
+  **Command**: `astro preview`
+  
+  **Purpose**: Preview production build locally
+  
+  **Requires**: `bun build` must be run first
+  
+  **Server**: `http://localhost:4321`
+  
+  **Usage**:
+  ```bash
+  bun build
+  bun preview
+  ```
+  
+  **Use case**: Test production build before deploying
+</ParamField>
+
+### astro
+
+<ParamField path="npm run astro" type="script">
+  **Command**: `astro`
+  
+  **Purpose**: Direct access to Astro CLI
+  
+  **Usage**:
+  ```bash
+  bun astro --help
+  bun astro add tailwind
+  bun astro check
+  ```
+</ParamField>
+
+## Dependencies
+
+<CodeGroup>
+```json package.json
+{
+  "dependencies": {
+    "@astrojs/vercel": "^9.0.4",
+    "@google/genai": "^1.42.0",
+    "astro": "^5.17.1"
+  },
+  "trustedDependencies": [
+    "protobufjs"
+  ]
+}
+```
+</CodeGroup>
+
+### @astrojs/vercel
+
+<ParamField path="@astrojs/vercel" type="package" default="^9.0.4">
+  **Purpose**: Vercel deployment adapter for Astro SSR
+  
+  **Features**:
+  - Serverless function generation
+  - Edge runtime support
+  - Image optimization
+  
+  **Documentation**: [Astro Vercel Adapter](https://docs.astro.build/en/guides/integrations-guide/vercel/)
+</ParamField>
+
+### @google/genai
+
+<ParamField path="@google/genai" type="package" default="^1.42.0">
+  **Purpose**: Google Gemini API client for Node.js
+  
+  **Used for**: AI-powered tarot reading generation
+  
+  **Models used**:
+  - `gemini-2.5-flash`
+  - `gemini-2.0-flash`
+  - `gemini-2.0-flash-lite`
+  
+  **Documentation**: [Google AI SDK](https://ai.google.dev/)
+</ParamField>
+
+### astro
+
+<ParamField path="astro" type="package" default="^5.17.1">
+  **Purpose**: Core Astro framework
+  
+  **Features used**:
+  - Server-Side Rendering (SSR)
+  - Server Actions
+  - TypeScript support
+  - Zod schema validation
+  
+  **Documentation**: [Astro Docs](https://docs.astro.build/)
+</ParamField>
+
+### trustedDependencies
+
+<ParamField path="trustedDependencies" type="array">
+  **Purpose**: Allow post-install scripts for specific packages
+  
+  **Contains**: `["protobufjs"]`
+  
+  **Reason**: `@google/genai` depends on `protobufjs`, which requires post-install script to compile protocol buffers
+  
+  **Security**: Only listed packages can run post-install scripts
+</ParamField>
+
+<Warning>
+  Do not add untrusted packages to `trustedDependencies`. Post-install scripts can execute arbitrary code.
+</Warning>
+
+## Usage Limit Configuration
+
+Usage limits are enforced client-side via localStorage.
+
+### Configuration Constants
+
+<CodeGroup>
+```typescript TarotForm.astro (lines 177-179)
+const LIMIT = 5;
+const WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours
+const STORAGE_KEY = 'tarot_usage';
+```
+</CodeGroup>
+
+### LIMIT
+
+<ParamField path="LIMIT" type="number" default="5">
+  **Purpose**: Maximum consultations per user per day
+  
+  **Default**: `5`
+  
+  **Enforcement**: Client-side (localStorage)
+  
+  **Bypass**: Users can clear localStorage to reset limit
+  
+  **Location**: `src/components/TarotForm.astro:177`
+  
+  **Modify**:
+  ```typescript
+  const LIMIT = 10; // Allow 10 consultations per day
+  ```
+</ParamField>
+
+### WINDOW_MS
+
+<ParamField path="WINDOW_MS" type="number" default="86400000">
+  **Purpose**: Time window for usage limit (milliseconds)
+  
+  **Default**: `24 * 60 * 60 * 1000` (24 hours)
+  
+  **Reset behavior**: Counter resets 24 hours after first use
+  
+  **Location**: `src/components/TarotForm.astro:178`
+  
+  **Examples**:
+  ```typescript
+  const WINDOW_MS = 12 * 60 * 60 * 1000; // 12 hours
+  const WINDOW_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+  ```
+</ParamField>
+
+### STORAGE_KEY
+
+<ParamField path="STORAGE_KEY" type="string" default="tarot_usage">
+  **Purpose**: localStorage key for usage tracking
+  
+  **Default**: `"tarot_usage"`
+  
+  **Data structure**:
+  ```json
+  {
+    "count": 3,
+    "firstUse": 1709481600000
+  }
+  ```
+  
+  **Location**: `src/components/TarotForm.astro:179`
+</ParamField>
+
+<Note>
+  Usage limits are not server-enforced. They serve as a gentle UX boundary for a recreational app.
+</Note>
+
+### Usage Tracking Logic
+
+<CodeGroup>
+```typescript Usage Tracking Functions
+function getUsage(): { count: number; firstUse: number } {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return { count: 0, firstUse: Date.now() };
+}
+
+function incrementUsage(): void {
+  const usage = getUsage();
+  const now = Date.now();
+  const reset = now - usage.firstUse >= WINDOW_MS;
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({
+    count: reset ? 1 : usage.count + 1,
+    firstUse: reset ? now : usage.firstUse,
+  }));
+}
+
+function getRemainingReadings(): number {
+  const usage = getUsage();
+  if (Date.now() - usage.firstUse >= WINDOW_MS) return LIMIT;
+  return Math.max(0, LIMIT - usage.count);
+}
+```
+</CodeGroup>
+
+<Info>
+  See `src/components/TarotForm.astro:181-203` for the complete usage tracking implementation.
+</Info>
+
+## Advanced Configuration
+
+### Custom Vercel Configuration
+
+Create `vercel.json` for advanced settings (optional):
+
+<CodeGroup>
+```json vercel.json (optional)
+{
+  "buildCommand": "bun build",
+  "devCommand": "bun dev",
+  "installCommand": "bun install",
+  "framework": "astro",
+  "outputDirectory": "dist",
+  "regions": ["iad1"],
+  "functions": {
+    "src/pages/**/*.astro": {
+      "maxDuration": 10,
+      "memory": 1024
+    }
+  },
+  "headers": [
+    {
+      "source": "/cards/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    }
+  ]
+}
+```
+</CodeGroup>
+
+<Warning>
+  `vercel.json` is optional. Vercel auto-detects Astro projects and applies optimal defaults.
+</Warning>
+
+### TypeScript Configuration
+
+Astro automatically generates `tsconfig.json`. No manual configuration needed.
+
+```json
+{
+  "extends": "astro/tsconfigs/strict"
+}
+```
+
+## Configuration Validation
+
+Run these checks to ensure proper configuration:
+
+```bash
+# Check environment variables
+echo $GEMINI_API_KEY
+
+# Validate Astro config
+bun astro check
+
+# Test build
+bun build
+
+# Test server actions locally
+bun dev
+# Submit a test consultation
+```
+
+<Info>
+  All configuration is validated at build time. Missing required values will fail the build.
+</Info>
